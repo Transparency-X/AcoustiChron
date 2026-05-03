@@ -1,8 +1,3 @@
-### Project Name: **AcoustiChron**
-*(A portmanteau of "Acoustics" and "Chronos", representing the continuous, long-term measurement of sound over time.)*
-
----
-
 # 🎙️ AcoustiChron
 
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
