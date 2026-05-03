@@ -3,74 +3,95 @@
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-Active_Development-orange)
+![Release](https://img.shields.io/badge/release-v1.1.0-purple)
 
 **AcoustiChron** is an open-source Python suite designed for continuous, high-resolution environmental acoustic logging and time-series analysis. 
 
-Built with calibrated measurement microphones (like the miniDSP UMIK-1) in mind, AcoustiChron captures real-time Sound Pressure Level (SPL) data at 1-second intervals and aggregates it into human-readable acoustic metrics. Whether you are monitoring neighborhood noise pollution, optimizing office acoustics, or studying sleep environments over a 30-day period, AcoustiChron provides the high-fidelity data you need.
+Built with calibrated measurement microphones (like the miniDSP UMIK-1) in mind, AcoustiChron captures real-time Sound Pressure Level (SPL) data at 1-second intervals. It streams this data asynchronously to **InfluxDB**, allowing you to monitor acoustics, track countermeasure effectiveness (like white noise or AGC), and visualize 30+ day trends in Grafana without dropping a single frame of audio.
 
 ## 📖 Overview
 
-Standard SPL meters give you a snapshot of a moment in time, but environmental sound analysis requires an understanding of *trends*. AcoustiChron utilizes a thread-safe architecture to ensure continuous audio streaming while seamlessly logging data to disk without dropping frames. 
+Standard SPL meters give you a snapshot of a moment in time, but environmental sound analysis requires an understanding of *trends*. AcoustiChron utilizes a thread-safe, non-blocking architecture to ensure continuous audio streaming. 
 
-Included is a powerful data-processing pipeline that utilizes `pandas` to take millions of high-resolution data points and automatically calculate industry-standard metrics—such as **Background Noise (L90)**, **Intrusive Noise (L10)**, and **Maximum Peaks (Lmax)**—across 15-minute, hourly, daily, weekly, and monthly timeframes.
+With the new built-in interactive console, users can manually tag acoustic events (e.g., "TV Playing", "HVAC On") in real-time. These tags are indexed natively in InfluxDB, allowing you to easily filter and visualize exactly how specific events impact the ambient noise floor (L90) and peak intrusive noise (L10) of your environment.
 
 ## ✨ Core Features
 
-* **High-Resolution Real-Time Logging:** Captures and calculates RMS-to-dBFS sound pressure levels at 1-second resolution using non-blocking background threads.
-* **Hardware Agnostic (UMIK-1 Optimized):** Works out-of-the-box with any USB measurement microphone. Features easily configurable calibration offsets to match your mic's individual sensitivity file.
-* **Automated Trend Aggregation:** Instantly condense millions of rows of data into actionable timeframes (15m, 1hr, 8hr, 24hr, 7d, 30d).
-* **Industry-Standard Acoustic Metrics:**
-  * **Leq:** The equivalent continuous sound level (average acoustic energy).
-  * **L10:** The sound level exceeded 10% of the time (Intrusive noise peak measure).
-  * **L90:** The sound level exceeded 90% of the time (True background/ambient noise).
-  * **Lmax / Lmin:** Absolute maximum and minimum sound levels recorded in the timeframe.
-* **Privacy First:** Only mathematical acoustic levels are stored. Raw audio is immediately discarded from RAM, ensuring compliance with privacy laws in offices or public spaces.
+* **High-Resolution Real-Time Logging:** Captures and calculates RMS-to-dBFS sound pressure levels at 1-second resolution.
+* **InfluxDB Native Integration:** Built from the ground up for Time-Series Databases. Capable of handling continuous 24/7 logging (2.6+ million rows/month) effortlessly.
+* **Live Event Tagging:** An interactive background thread allows you to type notes into the console while logging is active, instantly appending tags to your database points.
+* **Hardware Agnostic (UMIK-1 Optimized):** Works out-of-the-box with any USB measurement microphone. Features easily configurable calibration offsets.
+* **Privacy First:** Only mathematical acoustic levels are stored. Raw audio is instantly discarded from RAM, ensuring compliance with privacy laws in offices or public spaces.
 
 ---
 
-## 🚀 Roadmap of Future Features
+## 🛠️ Setup & Installation
 
-AcoustiChron is currently in **v1.0.0**. Our vision is to evolve it from a highly capable script into a fully containerized edge-computing appliance. 
+### Prerequisites
+* Python 3.8 or higher.
+* A USB Measurement Microphone (e.g., miniDSP UMIK-1).
+* Docker (for running a local instance of InfluxDB).
 
-### Phase 1: Enhanced DSP & Storage (v1.1 - v1.5)
-- [ ] **Software Weighting Filters:** Implement digital A-Weighting (dBA) and C-Weighting (dBC) directly in Python using `scipy.signal` to emulate human hearing and low-frequency HVAC rumble accurately.
-- [ ] **Database Migration:** Replace CSV logging with an SQLite database integration for faster querying and better stability over multi-month logging sessions.
-- [ ] **Headless Auto-Start:** Create `systemd` service templates to allow AcoustiChron to run flawlessly as a headless appliance on a Raspberry Pi.
-
-### Phase 2: Visualization & Alerting (v2.0)
-- [ ] **Time-Series Database Integration:** Native support for writing directly to **InfluxDB** or **Prometheus**.
-- [ ] **Grafana Dashboard Templates:** Pre-configured JSON dashboards allowing users to visualize 1-second resolution metrics, pan, and zoom through months of data via a web browser.
-- [ ] **Threshold Alerting System:** Webhook integrations (Slack/Discord/Email) that trigger if a specific metric (e.g., Leq over a 15-minute window) exceeds local noise ordinance limits (e.g., >85 dB).
-
-### Phase 3: Advanced Acoustics & Machine Learning (v3.0)
-- [ ] **Real-Time 1/3 Octave Band Analysis:** Log frequency-specific SPL alongside broadband levels to help users determine *what* is making the noise (e.g., 60Hz electrical hum vs. 1000Hz human voices).
-- [ ] **Edge AI Sound Classification:** Integration with TensorFlow Lite to locally classify and tag noise events (e.g., "Sirens", "Traffic", "Dog Barking", "HVAC") in the logs without saving the raw audio, enabling intelligent noise pollution tracking.
-
----
-
-## 🛠️ Quick Start
-
-**1. Install Dependencies**
+### 1. Install Python Dependencies
+Clone this repository and install the required libraries:
 ```bash
-pip install -r requirements.txt
-# Requirements: sounddevice, numpy, pandas, scipy
+git clone https://github.com/yourusername/acoustichron.git
+cd acoustichron
+pip install sounddevice numpy influxdb-client
 ```
 
-**2. Calibrate Your Mic**
-Open `logger.py` and update the `CALIBRATION_OFFSET` to match your specific microphone's dBFS-to-SPL offset.
+### 2. Set Up InfluxDB (Local Edge Database)
+The best way to run InfluxDB locally without hitting cloud rate limits is via Docker. Run this command to spin up an InfluxDB container:
+```bash
+docker run -p 8086:8086 -v influxdb2:/var/lib/influxdb2 influxdb:latest
+```
+1. Open your browser and navigate to `http://localhost:8086`.
+2. Follow the setup wizard and create an Organization (e.g., `Acoustics_Lab`) and a Bucket (e.g., `acoustichron_data`).
+3. Navigate to **Load Data > API Tokens** and generate an **All Access Token**. Copy this token.
 
-**3. Start Logging**
+*(Note: You can also use InfluxDB Cloud. See the wiki for cloud setup).*
+
+### 3. Configure the Script
+Open `logger.py` in your favorite text editor and update the configuration section:
+```python
+# UPDATE THESE VARIABLES IN logger.py
+CALIBRATION_OFFSET = 100.0  # Find this in your mic's calibration file
+INFLUX_TOKEN = "PASTE_YOUR_COPIED_TOKEN_HERE"
+INFLUX_ORG = "Acoustics_Lab"
+INFLUX_BUCKET = "acoustichron_data"
+```
+
+---
+
+## 🚀 Usage
+
+Start the logger by running:
 ```bash
 python logger.py
 ```
 
-**4. Analyze Data Trends**
-```bash
-python analyzer.py --input acoustic_log.csv
-```
+**Live Event Tagging:**
+While the script is running, you can type directly into the console to tag the acoustic environment.
+* Type `White Noise Active` and press Enter. All subsequent logged seconds will carry this tag in InfluxDB.
+* Type `clear` and press Enter to return to baseline logging.
+* Press `Ctrl+C` to gracefully flush the database queue and exit.
 
-## 🤝 Contributing
-Pull requests are welcome! If you are an acoustics engineer, data scientist, or Python developer, we would love your help in implementing A/C weighting filters or Grafana dashboards. Please open an issue first to discuss what you would like to change.
+**Visualizing the Data:**
+Connect your InfluxDB instance to **Grafana**. Query the `spl_db` field and group by `event_tag` to instantly generate beautiful, color-coded line graphs of your acoustic environment!
 
-## 📄 License
-Distributed under the MIT License. See `LICENSE` for more information.
+---
+
+## 🛣️ Roadmap
+
+### Phase 1: Enhanced DSP & Storage (Current)
+- [x] **Database Migration:** Replaced CSV logging with InfluxDB integration for robust, multi-month logging sessions.
+- [x] **Live Tagging:** Added multi-threaded console input for manual acoustic event tracking.
+- [ ] **Software Weighting Filters:** Implement digital A-Weighting (dBA) and C-Weighting (dBC) in Python using `scipy.signal`.
+
+### Phase 2: Visualization & Alerting
+- [ ] **Grafana Dashboard Templates:** Provide pre-configured JSON dashboards to instantly visualize L10, L90, and Leq trends.
+- [ ] **Threshold Alerting System:** Webhook integrations (Slack/Discord) that trigger if rolling averages exceed noise ordinance limits.
+
+### Phase 3: Advanced Acoustics & Machine Learning
+- [ ] **Real-Time 1/3 Octave Band Analysis:** Log frequency-specific SPL alongside broadband levels to determine *what* is making the noise.
+- [ ] **Edge AI Sound Classification:** Integration with TensorFlow Lite / YAMNet to locally classify and tag noise events automatically without saving raw audio.
